@@ -167,7 +167,25 @@ const OPTIONAL_SERVICES = [
   '0000190e-0000-1000-8000-00805f9b34fb',
   '000055ff-0000-1000-8000-00805f9b34fb',
   '0000c3e6-0000-1000-8000-00805f9b34fb',
+  '6e40fff0-b5a3-f393-e0a9-e50e24dcca9e',              // Colmi
+  'de5bf728-d711-4e47-af26-65e3012a5dc7',              // Colmi (big data)
+  '0000a800-0000-1000-8000-00805f9b34fb',
+  '0000a00a-0000-1000-8000-00805f9b34fb',
+  '00006287-3c17-d293-8e48-14fe2e4da212',
+  '0000e0ff-3c17-d293-8e48-14fe2e4da212',
 ];
+// Web Bluetooth only reveals services that were requested up front, so we also ask for
+// whole ranges of 16-bit UUIDs and of the Realtek vendor base (…-3c17-d293-8e48-14fe2e4da212).
+(function addRanges() {
+  const seen = new Set(OPTIONAL_SERVICES);
+  const add = (uuid) => { if (!seen.has(uuid)) { seen.add(uuid); OPTIONAL_SERVICES.push(uuid); } };
+  const h4 = (n) => n.toString(16).padStart(4, '0');
+  const ranges = [[0x1800, 0x18ff], [0x1900, 0x19ff], [0xa000, 0xa0ff], [0xae00, 0xae3f],
+                  [0xd000, 0xd0ff], [0xfd00, 0xfdff], [0xfe00, 0xffff]];
+  for (const [a, b] of ranges) for (let n = a; n <= b; n++) add(u16(h4(n)));
+  for (const [a, b] of [[0x0000, 0x02ff], [0xa000, 0xa0ff], [0xd000, 0xd0ff], [0xe000, 0xe0ff], [0xff00, 0xffff]])
+    for (let n = a; n <= b; n++) add(`0000${h4(n)}-3c17-d293-8e48-14fe2e4da212`);
+})();
 
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -269,7 +287,13 @@ function setConnected(on) {
 async function connect() {
   status('');
   try {
-    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: OPTIONAL_SERVICES });
+    try {
+      device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: OPTIONAL_SERVICES });
+    } catch (e) {
+      if (e.name !== 'TypeError' && e.name !== 'SecurityError') throw e;
+      log('Große Dienst-Liste abgelehnt (' + e.message + '), versuche kurze Liste.');
+      device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: OPTIONAL_SERVICES.slice(0, 40) });
+    }
   } catch (e) {
     if (e.name !== 'NotFoundError') status('Suche abgebrochen: ' + e.message, 'err');
     return;
@@ -300,7 +324,7 @@ async function connect() {
 async function inspect() {
   serviceMap.clear(); detected = [];
   const services = await server.getPrimaryServices();
-  log(`${services.length} freigegebene Dienste:`);
+  log(`${services.length} freigegebene Dienste (von ${OPTIONAL_SERVICES.length} angefragten):`);
   for (const s of services) {
     serviceMap.set(s.uuid, s);
     log(`  Dienst ${s.uuid}`);
