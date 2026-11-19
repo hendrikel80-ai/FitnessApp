@@ -11,7 +11,12 @@ per Bluetooth stellt. Keine Anmeldung, kein Konto, keine Datensammlung – alles
 3. „Uhr suchen & verbinden“ → Uhr auswählen → „Uhrzeit & Datum übertragen“.
 4. Optional: Chrome-Menü → „Zum Startbildschirm hinzufügen“, dann sieht es aus wie eine normale App.
 
-## Online stellen (GitHub Pages)
+## Online
+
+Die App ist veröffentlicht unter **https://uhrzeit-sync.pages.dev** (Cloudflare Pages).
+Nach Änderungen: `python3 scripts/build_worker.py > _worker.js` und erneut hochladen (siehe Skript).
+
+## Alternativ: GitHub Pages
 
 Web-Bluetooth funktioniert nur über `https://`. Am einfachsten:
 GitHub → Repository → *Settings* → *Pages* → Branch auswählen, Ordner `/ (root)` → *Save*.
